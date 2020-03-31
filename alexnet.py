@@ -48,6 +48,7 @@ class AlexNet(object):
         self.SKIP_LAYER = skip_layer
         self.MOMENTUM = momentum
 
+        # Alterar caminho aqui para esse determinado aquivo:
         if weights_path == 'DEFAULT':
             self.WEIGHTS_PATH = 'D:/Docs/indoor/tf_alexnet/alexnet_epoch182.npy'
         else:
