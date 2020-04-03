@@ -149,6 +149,8 @@ class FrontEnd(object):
                 self.screen.fill([0,0,0])
                 frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
                 frameRet = frame_read.frame
+                
+                vid = self.tello.get_video_capture()
 
                 # Convert image to float32 and resize to (227x227)
                 frame = cv2.resize(frame.astype(np.float32), (227,227))
@@ -160,7 +162,7 @@ class FrontEnd(object):
                 frame = frame.reshape((1, 227, 227, 3))
                 # frame = np.rot90(frame)
                 # frame = np.flipud(frame)
-                frame = pygame.surfarray.make_surface(frame)
+                # frame = pygame.surfarray.make_surface(frame)
                 self.screen.blit(frame, (0,0))
 
                 # Run the session and calculate the class probability
@@ -169,8 +171,6 @@ class FrontEnd(object):
 
                 #Get the class name of the class with the hightest probability
                 self.class_name = class_names[np.argmax(self.probs)]
-
-                vid = self.tello.get_video_capture()
 
                 if args.save_session:
                     cv2.imwrite("{}/tellocap{}.jpg".format(ddir, imgCount), frameRet)
