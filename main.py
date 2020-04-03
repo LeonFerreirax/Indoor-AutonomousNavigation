@@ -146,7 +146,7 @@ class FrontEnd(object):
                     break
 
                 theTime = str(datetime.datetime.now()).replace(':', '-').replace('.', '_')
-                self.screen.fill([0,0,0])
+                #self.screen.fill([0,0,0])
                 frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
                 frameRet = frame_read.frame
                 
@@ -163,7 +163,7 @@ class FrontEnd(object):
                 # frame = np.rot90(frame)
                 # frame = np.flipud(frame)
                 # frame = pygame.surfarray.make_surface(frame)
-                self.screen.blit(frame, (0,0))
+                # self.screen.blit(frame, (0,0))
 
                 # Run the session and calculate the class probability
                 self.probs = sess.run(softmax, feed_dict={x: frame,
@@ -201,57 +201,53 @@ class FrontEnd(object):
 
                 if self.send_rc_control:
                     for (forward, left, right, spinLeft, spinRight, stop) in self.probs:
-                        if self.class_name == class_names[0]:
-                            self.for_back_velocity = int((forward * 10) + S)
-                            if left > right:
-                                self.yaw_velocity = -int((left * 100) + S)
-                            elif left < right:
-                                self.yaw_velocity = int((right * 100) + S)
-                            else:
-                                self.yaw_velocity = 0
-                        elif self.class_name == class_names[1]:
-                            self.yaw_velocity = -int((left * 10) + S)
-                            if (forward >= right):
-                                self.for_back_velocity = int((forward * 100) + S)
-                            else:
-                                self.for_back_velocity = 0
-                        elif self.class_name == class_names[2]:
-                            self.yaw_velocity = int((right * 10) + S)
-                            if (forward >= left):
-                                self.for_back_velocity = int((forward * 100) + S)
-                            else:
-                                self.for_back_velocity = 0
-                        elif self.class_name == class_names[3]:
-                            self.for_back_velocity = 0
-                            self.yaw_velocity = -int((spinLeft * 10) + S)
-                            if (forward > left):
-                                self.for_back_velocity = int((forward * 100) + S)
-                            else:
-                                self.for_back_velocity = 0
-                                self.yaw_velocity += int((left * 100) + S)
-                        elif self.class_name == class_names[4]:
-                            self.for_back_velocity = 0
-                            self.yaw_velocity = int((spinRight * 10) + S)
-                            if (forward > right):
-                                self.for_back_velocity = int((forward * 100) + S)
-                            else:
-                                self.for_back_velocity = 0
-                                self.yaw_velocity += int((right * 100))
+                      print("Class: " + class_name + ", probability: %.4f" % self.probs[0, np.argmax(self.probs)])
+                      if self.class_name == class_names[0]:
+                        self.for_back_velocity = int((forward * 10) + S)
+                        if left > right:
+                          self.yaw_velocity = -int((left * 100) + S)
+                        elif left < right:
+                          self.yaw_velocity = int((right * 100) + S)
                         else:
-                            if not args.debug:
-                                print("Landing")
-                                self.tello.land()
-                            self.send_rc_control = False
-
+                          self.yaw_velocity = 0
+                      elif self.class_name == class_names[1]:
+                        self.yaw_velocity = -int((left * 10) + S)
+                        if (forward >= right):
+                          self.for_back_velocity = int((forward * 100) + S)
+                        else:
+                          self.for_back_velocity = 0
+                      elif self.class_name == class_names[2]:
+                        self.yaw_velocity = int((right * 10) + S)
+                        if (forward >= left):
+                          self.for_back_velocity = int((forward * 100) + S)
+                        else:
+                          self.for_back_velocity = 0
+                      elif self.class_name == class_names[3]:
+                        self.for_back_velocity = 0
+                        self.yaw_velocity = -int((spinLeft * 10) + S)
+                        if (forward > left):
+                          self.for_back_velocity = int((forward * 100) + S)
+                        else:
+                          self.for_back_velocity = 0
+                          self.yaw_velocity += int((left * 100) + S)
+                      elif self.class_name == class_names[4]:
+                        self.for_back_velocity = 0
+                        self.yaw_velocity = int((spinRight * 10) + S)
+                        if (forward > right):
+                          self.for_back_velocity = int((forward * 100) + S)
+                        else:
+                          self.for_back_velocity = 0
+                          self.yaw_velocity += int((right * 100))
+                      else:
+                        if not args.debug:
+                          print("Landing")
+                          self.tello.land()
+                          self.send_rc_control = False
 
                 # Quit the software
                 if k == 27:
                     should_stop = True
                     break
-
-
-
-
 
                 # Display the resulting frame
                 cv2.imshow(f'Tello Tracking...', frameRet)
@@ -339,6 +335,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+ 
 # class_names = ["moveForward", "moveLeft", "moveRight", "spinLeft", "spinRight", "stop"]
 #
 # #mean of imagenet dataset in BGR
