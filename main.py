@@ -82,7 +82,6 @@ class FrontEnd(object):
         self.left_right_velocity = 0
         self.up_down_velocity = 0
         self.yaw_velocity = 0
-        oSpeed = args.override_speed
         self.speed = 10
 
         self.send_rc_control = False
