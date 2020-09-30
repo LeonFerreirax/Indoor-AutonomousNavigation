@@ -254,7 +254,7 @@ class FrontEnd(object):
 
 
                 # Display the resulting frame
-                cv2.imshow(f'Tello Tracking...', frameRet)
+                cv2.imshow('Tello Tracking...', frameRet)
 
         # for event in pygame.event.get():
         #     if event.type == pygame.USEREVENT + 1:

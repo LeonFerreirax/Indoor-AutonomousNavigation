@@ -7,7 +7,7 @@ from alexnet import AlexNet
 # Edit just these
 FILE_PATH = tf.train.latest_checkpoint('D:/Docs/indoor/finetune_alexnet/checkpoints')
 NUM_CLASSES = 6
-OUTPUT_FILE = 'D:/Docs/indoor/tf_alexnet/alexnet_epoch182.npy'
+OUTPUT_FILE = 'D:/Docs/indoor/tf_alexnet/alexnet_epoch1.npy'
 
 
 if __name__ == '__main__':

@@ -36,8 +36,8 @@ val_file = 'Indoor_Dataset/output/val/val.txt'
 
 
 # Learning params
-learning_rate = 0.0001
-num_epochs = 200
+learning_rate = 0.215
+num_epochs = 1000
 batch_size = 128
 
 # Network params

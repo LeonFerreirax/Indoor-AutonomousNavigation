@@ -50,7 +50,7 @@ class AlexNet(object):
 
         # Alterar caminho aqui para esse determinado aquivo:
         if weights_path == 'DEFAULT':
-            self.WEIGHTS_PATH = 'D:/Docs/indoor/tf_alexnet/alexnet_epoch182.npy'
+            self.WEIGHTS_PATH = 'D:/Docs/tcc_indoor_final/tf_alexnet/bvlc_alexnet.npy'
         else:
             self.WEIGHTS_PATH = weights_path
 
