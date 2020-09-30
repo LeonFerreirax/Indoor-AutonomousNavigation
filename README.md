@@ -43,7 +43,7 @@ Abra o terminal do seu sistema, vá até a pasta em que o projeto ocupará (esco
 
 -**Passo 2:** Abra o diretório em um terminal:
 
-> python main.py
+> python final.py --ss
 
 -**Passo 3:** Apertar botão escolhido para iniciar a decolagem (t)
 
