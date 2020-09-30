@@ -34,16 +34,16 @@ Abra o terminal do seu sistema, vá até a pasta em que o projeto ocupará (esco
 1. > git clone https://github.com/LeonFerreirax/Indoor-AutonomousNavigation.git
 2. > cd Indoor-AutonomousNavigation/
 3. > pip install -r requirements.txt
-4. É necessário baixar os _pesos_ da Rede Neural Alexnet treinada disponível em [alexnet_epoch182]( https://drive.google.com/file/d/1FWwhKHuX-FYCrbLRGD3kms2oMEuUOAt1/view?usp=sharing)
-5. Adicione o arquivo baixado "alexnet_epoch182.npy" descompactado no diretório **tf_alexnet** deste repositótio
-6. Abra o código "alexnet.py" em um editor de texto e altere o campo "_WEIGHTS_PATH_" na **linha 53** para o devido caminho dos _pesos_ em sua máquina e salve.   
+4. É necessário baixar os _pesos_ da Rede Neural Alexnet treinada disponível em [alexnet_epoch178]( https://drive.google.com/file/d/1VbWI-2oCERg5gDiOtl4TmyMMYlkY0zkI/view?usp=sharing)
+5. Adicione od arquivo baixadod e descompactadod no diretório **tf_alexnet** deste repositótio
+6. Abra o código "final.py" e verifique se os caminhos do metagraph e do checkpoint estão enderaçados corretamente.   
 
 ## Executando o código
 -**Passo 1:** Ligue o Drone Tello e conecte seu dispositivo ao Drone via wifi.
 
 -**Passo 2:** Abra o diretório em um terminal:
 
-> python main.py
+> python final.py --ss
 
 -**Passo 3:** Apertar botão escolhido para iniciar a decolagem (t)
 
