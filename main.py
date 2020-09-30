@@ -67,12 +67,6 @@ class FrontEnd(object):
     """
 
     def __init__(self):
-        # Init pygame
-        pygame.init()
-
-        # Create pygame window
-        pygame.display.set_caption("Tello video stream")
-        self.screen = pygame.display.set_mode([960, 720])
 
         # Init Tello object that interacts with Tello Drone
         self.tello = Tello()
@@ -85,9 +79,6 @@ class FrontEnd(object):
         self.speed = 10
 
         self.send_rc_control = False
-
-        # create update timer
-        pygame.time.set_timer(pygame.USEREVENT + 1, 50)
 
     def run(self):
 
@@ -146,9 +137,11 @@ class FrontEnd(object):
                     break
 
                 theTime = str(datetime.datetime.now()).replace(':', '-').replace('.', '_')
-                self.screen.fill([0,0,0])
+                #self.screen.fill([0,0,0])
                 frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
                 frameRet = frame_read.frame
+                
+                vid = self.tello.get_video_capture()
 
                 # Convert image to float32 and resize to (227x227)
                 frame = cv2.resize(frame.astype(np.float32), (227,227))
@@ -160,8 +153,8 @@ class FrontEnd(object):
                 frame = frame.reshape((1, 227, 227, 3))
                 # frame = np.rot90(frame)
                 # frame = np.flipud(frame)
-                frame = pygame.surfarray.make_surface(frame)
-                self.screen.blit(frame, (0,0))
+                # frame = pygame.surfarray.make_surface(frame)
+                # self.screen.blit(frame, (0,0))
 
                 # Run the session and calculate the class probability
                 self.probs = sess.run(softmax, feed_dict={x: frame,
@@ -170,12 +163,10 @@ class FrontEnd(object):
                 #Get the class name of the class with the hightest probability
                 self.class_name = class_names[np.argmax(self.probs)]
 
-                vid = self.tello.get_video_capture()
-
                 if args.save_session:
                     cv2.imwrite("{}/tellocap{}.jpg".format(ddir, imgCount), frameRet)
-
-                pygame.display.update()
+                
+                frame = np.rot90(frame)
 
                 imgCount += 1
 
@@ -198,59 +189,55 @@ class FrontEnd(object):
                         print("Landing")
                         self.tello.land()
                     self.send_rc_control = False
+                    
+            # Quit the software
+            if k == 27:
+              should_stop = True
+              break
 
-                if self.send_rc_control:
-                    for (forward, left, right, spinLeft, spinRight, stop) in self.probs:
-                        if self.class_name == class_names[0]:
-                            self.for_back_velocity = int((forward * 10) + S)
-                            if left > right:
-                                self.yaw_velocity = -int((left * 100) + S)
-                            elif left < right:
-                                self.yaw_velocity = int((right * 100) + S)
-                            else:
-                                self.yaw_velocity = 0
-                        elif self.class_name == class_names[1]:
-                            self.yaw_velocity = -int((left * 10) + S)
-                            if (forward >= right):
-                                self.for_back_velocity = int((forward * 100) + S)
-                            else:
-                                self.for_back_velocity = 0
-                        elif self.class_name == class_names[2]:
-                            self.yaw_velocity = int((right * 10) + S)
-                            if (forward >= left):
-                                self.for_back_velocity = int((forward * 100) + S)
-                            else:
-                                self.for_back_velocity = 0
-                        elif self.class_name == class_names[3]:
-                            self.for_back_velocity = 0
-                            self.yaw_velocity = -int((spinLeft * 10) + S)
-                            if (forward > left):
-                                self.for_back_velocity = int((forward * 100) + S)
-                            else:
-                                self.for_back_velocity = 0
-                                self.yaw_velocity += int((left * 100) + S)
-                        elif self.class_name == class_names[4]:
-                            self.for_back_velocity = 0
-                            self.yaw_velocity = int((spinRight * 10) + S)
-                            if (forward > right):
-                                self.for_back_velocity = int((forward * 100) + S)
-                            else:
-                                self.for_back_velocity = 0
-                                self.yaw_velocity += int((right * 100))
-                        else:
-                            if not args.debug:
-                                print("Landing")
-                                self.tello.land()
-                            self.send_rc_control = False
-
-
-                # Quit the software
-                if k == 27:
-                    should_stop = True
-                    break
-
-
-
+            if self.send_rc_control:
+              for (forward, left, right, spinLeft, spinRight, stop) in self.probs:
+                print("Class: " + class_name + ", probability: %.4f" % self.probs[0, np.argmax(self.probs)])
+                if self.class_name == class_names[0]:
+                  self.for_back_velocity = int((forward * 10) + S)
+                  if left > right:
+                    self.yaw_velocity = -int((left * 100) + S)
+                  elif left < right:
+                    self.yaw_velocity = int((right * 100) + S)
+                  else:
+                    self.yaw_velocity = 0
+                elif self.class_name == class_names[1]:
+                  self.yaw_velocity = -int((left * 10) + S)
+                  if (forward >= right):
+                    self.for_back_velocity = int((forward * 100) + S)
+                  else:
+                    self.for_back_velocity = 0
+                elif self.class_name == class_names[2]:
+                  self.yaw_velocity = int((right * 10) + S)
+                  if (forward >= left):
+                    self.for_back_velocity = int((forward * 100) + S)
+                  else:
+                    self.for_back_velocity = 0
+                 elif self.class_name == class_names[3]:
+                    self.for_back_velocity = 0
+                    self.yaw_velocity = -int((spinLeft * 10) + S)
+                    if (forward > left):
+                      self.for_back_velocity = int((forward * 100) + S)
+                    else:
+                      self.for_back_velocity = 0
+                      self.yaw_velocity += int((left * 100) + S)
+                  elif self.class_name == class_names[4]:
+                    self.for_back_velocity = 0
+                    self.yaw_velocity = int((spinRight * 10) + S)
+                    if (forward > right):
+                      self.for_back_velocity = int((forward * 100) + S)
+                    else:
+                      self.for_back_velocity = 0
+                      self.yaw_velocity += int((right * 100))
+                  else:
+                    print("Landing")
+                    self.tello.land()
+                    self.send_rc_control = False
 
 
                 # Display the resulting frame
@@ -339,6 +326,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+ 
 # class_names = ["moveForward", "moveLeft", "moveRight", "spinLeft", "spinRight", "stop"]
 #
 # #mean of imagenet dataset in BGR
