@@ -31,3 +31,4 @@ termcolor
 urllib3
 wheel
 wrapt
+random
