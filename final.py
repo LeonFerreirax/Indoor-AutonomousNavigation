@@ -53,7 +53,7 @@ keep_prob = tf.placeholder(tf.float32)
 imgCount = 0
 startCounter = 0
 
-S = 20
+S = 5
 
 #Inicialize Tello
 mdrone = Tello()
@@ -188,7 +188,17 @@ while True:
                     mdrone.end()
                     break
 
-                time.sleep(3)
+                time.sleep(2)
+    elif cmd == ord('l'):
+        mdrone.emergency()
+        mdrone.land()
+        mdrone.end()
+        cv2.destroyAllWindows()
+        break
+    else:
+        continue
+
+
 
 
 
