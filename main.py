@@ -1,331 +1,99 @@
-#some basic imports and setups
+#Basic imports and setups
 import argparse
 import datetime
 import os
+import random
 import socket
 import threading
 import time
 import cv2
 import numpy as np
+import glob
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from djitellopy.tello import Tello
-import pygame
 from alexnet import AlexNet
+from tensorflow.python.tools import inspect_checkpoint as chkp
+seed_value = 1234
+tf.keras.backend.clear_session()
+np.random.seed(seed_value)
+tf.set_random_seed(seed_value)
+random.seed(seed_value)
 
-# standard argparse stuff
-parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help=False)
-parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
-                    help='** = required')
-# parser.add_argument('-d', '--distance', type=int, default=3,
-#     help='use -d to change the distance of the drone. Range 0-6')
-# parser.add_argument('-sx', '--saftey_x', type=int, default=100,
-#     help='use -sx to change the saftey bound on the x axis . Range 0-480')
-# parser.add_argument('-sy', '--saftey_y', type=int, default=55,
-#     help='use -sy to change the saftey bound on the y axis . Range 0-360')
-# parser.add_argument('-os', '--override_speed', type=int, default=1,
-#     help='use -os to change override speed. Range 0-3')
-parser.add_argument('-ss', "--save_session", action='store_true',
-    help='add the -ss flag to save your session as an image sequence in the Sessions folder')
-parser.add_argument('-D', "--debug", action='store_true',
-    help='add the -D flag to enable debug mode. Everything works the same, but no commands will be sent to the drone')
+#def reset_session(seed):
+#  tf.keras.backend.clear_session()
+#  tf.compat.v1.set_random_seed(seed)
+#  np.random.seed(seed)
+#  random.seed(seed)
+#reset_session(seed=seed_value)
 
-args = parser.parse_args()
-
+batch_size = 1
 #Possíveis comandos
-class_names = ["moveForward", "moveLeft", "moveRight", "spinLeft", "spinRight", "stop"]
-
-#mean of imagenet dataset in BGR
-imagenet_mean = np.array([104., 117., 124.], dtype=np.float32)
-
-current_dir = os.getcwd()
-
-#Alterar aqui se preciso o caminho
-# diretor = os.path.join(current_dir, 'output/')
-
-# Speed
-S = 20
-# Frames per second of the pygame window display
-FPS = 25
-
-# If we are to save our sessions, we need to make sure the proper directories exist
-if args.save_session:
-    ddir = "Sessions"
-
-    if not os.path.isdir(ddir):
-        os.mkdir(ddir)
-
-    ddir = "Sessions/Session {}".format(str(datetime.datetime.now()).replace(':','-').replace('.','_'))
-    os.mkdir(ddir)
-
-class FrontEnd(object):
-    """ Maintains the Tello display and moves it through the keyboard keys.
-        Press escape key to quit.
-        The controls are:
-            - T: Takeoff
-            - L: Land
-    """
-
-    def __init__(self):
-
-        # Init Tello object that interacts with Tello Drone
-        self.tello = Tello()
-
-        # Drone velocities between -100~100
-        self.for_back_velocity = 0
-        self.left_right_velocity = 0
-        self.up_down_velocity = 0
-        self.yaw_velocity = 0
-        self.speed = 10
-
-        self.send_rc_control = False
-
-    def run(self):
-
-        if not self.tello.connect():
-            print("Tello not connected")
-            return
-
-        if not self.tello.set_speed(self.speed):
-            print("Not set speed to lowest possible")
-            return
-
-        # In case streaming is on. This happens when we quit this program without the escape key.
-        if not self.tello.streamoff():
-            print("Could not stop video stream")
-            return
-
-        if not self.tello.streamon():
-            print("Could not start video stream")
-            return
-
-        # grab the current timestamp and use it to construct the filename
-        ts = datetime.datetime.now()
-
-        filename = "-{}.jpg".format(ts.strftime("%Y-%m-%d_%H-%M-%S"))
-
-        #placeholder for input and dropout rate
-        x = tf.placeholder(tf.float32, [1, 227, 227, 3])
-        keep_prob = tf.placeholder(tf.float32)
-
-        #Create a model with default config( == noskip_layer and 6 unitsin the last layer
-        model = AlexNet(x, keep_prob, 6, [])
-
-        #Define activation of last layer as score
-        score = model.fc8
-
-        #Create op to calculate softmax
-        softmax = tf.nn.softmax(score)
-
-        with tf.Session() as sess:
-
-            #Initialize all variables
-            sess.run(tf.global_variables_initializer())
-
-            # Load the pretrained weights into the model
-            model.load_initial_weights(sess)
-
-            frame_read = self.tello.get_frame_read()
-            imgCount = 0
-            should_stop = False
-
-            while not should_stop:
-                self.update()
-
-                if frame_read.stopped:
-                    frame_read.stop()
-                    break
-
-                theTime = str(datetime.datetime.now()).replace(':', '-').replace('.', '_')
-                #self.screen.fill([0,0,0])
-                frame = cv2.cvtColor(frame_read.frame, cv2.COLOR_BGR2RGB)
-                frameRet = frame_read.frame
-                
-                vid = self.tello.get_video_capture()
-
-                # Convert image to float32 and resize to (227x227)
-                frame = cv2.resize(frame.astype(np.float32), (227,227))
-
-                # Subtract the ImageNet mean
-                frame -= imagenet_mean
-
-                # Reshape as needed to feed into model
-                frame = frame.reshape((1, 227, 227, 3))
-                # frame = np.rot90(frame)
-                # frame = np.flipud(frame)
-                # frame = pygame.surfarray.make_surface(frame)
-                # self.screen.blit(frame, (0,0))
-
-                # Run the session and calculate the class probability
-                self.probs = sess.run(softmax, feed_dict={x: frame,
-                                                     keep_prob: 1})
-
-                #Get the class name of the class with the hightest probability
-                self.class_name = class_names[np.argmax(self.probs)]
-
-                if args.save_session:
-                    cv2.imwrite("{}/tellocap{}.jpg".format(ddir, imgCount), frameRet)
-                
-                frame = np.rot90(frame)
-
-                imgCount += 1
-
-                time.sleep(1 / FPS)
-
-                # Listen for key presses
-                k = cv2.waitKey(20)
-
-                # Press T to take off
-                if k == ord('t'):
-                    if not args.debug:
-                        print("Taking Off")
-                        self.tello.takeoff()
-                        self.tello.get_battery()
-                    self.send_rc_control = True
-
-                # Press L to land
-                if k == ord('l'):
-                    if not args.debug:
-                        print("Landing")
-                        self.tello.land()
-                    self.send_rc_control = False
-                    
-            # Quit the software
-            if k == 27:
-              should_stop = True
-              break
-
-            if self.send_rc_control:
-              for (forward, left, right, spinLeft, spinRight, stop) in self.probs:
-                print("Class: " + class_name + ", probability: %.4f" % self.probs[0, np.argmax(self.probs)])
-                if self.class_name == class_names[0]:
-                  self.for_back_velocity = int((forward * 10) + S)
-                  if left > right:
-                    self.yaw_velocity = -int((left * 100) + S)
-                  elif left < right:
-                    self.yaw_velocity = int((right * 100) + S)
-                  else:
-                    self.yaw_velocity = 0
-                elif self.class_name == class_names[1]:
-                  self.yaw_velocity = -int((left * 10) + S)
-                  if (forward >= right):
-                    self.for_back_velocity = int((forward * 100) + S)
-                  else:
-                    self.for_back_velocity = 0
-                elif self.class_name == class_names[2]:
-                  self.yaw_velocity = int((right * 10) + S)
-                  if (forward >= left):
-                    self.for_back_velocity = int((forward * 100) + S)
-                  else:
-                    self.for_back_velocity = 0
-                 elif self.class_name == class_names[3]:
-                    self.for_back_velocity = 0
-                    self.yaw_velocity = -int((spinLeft * 10) + S)
-                    if (forward > left):
-                      self.for_back_velocity = int((forward * 100) + S)
-                    else:
-                      self.for_back_velocity = 0
-                      self.yaw_velocity += int((left * 100) + S)
-                  elif self.class_name == class_names[4]:
-                    self.for_back_velocity = 0
-                    self.yaw_velocity = int((spinRight * 10) + S)
-                    if (forward > right):
-                      self.for_back_velocity = int((forward * 100) + S)
-                    else:
-                      self.for_back_velocity = 0
-                      self.yaw_velocity += int((right * 100))
-                  else:
-                    print("Landing")
-                    self.tello.land()
-                    self.send_rc_control = False
+class_names = ["moveForward", "moveLeft", "moveRight",
+               "spinLeft", "spinRight", "stop"]
 
 
-                # Display the resulting frame
-                cv2.imshow('Tello Tracking...', frameRet)
 
-        # for event in pygame.event.get():
-        #     if event.type == pygame.USEREVENT + 1:
-        #         self.update()
-        #     elif event.type == pygame.QUIT:
-        #         should_stop = True
-        #     elif event.type == pygame.KEYDOWN:
-        #         if event.key == pygame.K_ESCAPE:
-        #             should_stop = True
-        #         else:
-        #             self.keydown(event.key)
-        #     elif event.type == pygame.KEYUP:
-        #         self.keyup(event.key)
+def test_image(path_image, num_class, weights_path='Default'):
+    #tf.set_random_seed(seed=seed_value)
+    tf.reset_default_graph()
 
-        # On exit, print the battery
-        self.tello.get_battery()
+    keep_prob = tf.placeholder(dtype=tf.float32, shape=[],name="keep_prob")
+    #
+    img_string = tf.read_file(path_image)
+    img_decoded = tf.image.decode_png(img_string, channels=3)
+    print(type(img_decoded))
+    # img_decoded = tf.image.decode_jpeg(img_string, channels=3)
+    img_resized = tf.image.resize_images(img_decoded, [227, 227])
+    img_resized = tf.reshape(img_resized, shape=[batch_size, 227, 227, 3])
 
-        # When everything done, release the capture
-        cv2.destroyAllWindows()
+    # AlexNet
+    saver = tf.train.import_meta_graph('D:/Docs/tcc_indoor_final/finetune_alexnet/checkpoint/model_epoch178.ckpt.meta')
+    model = AlexNet(img_resized, keep_prob, 6, skip_layer='', weights_path=saver)
+    score = tf.nn.softmax(model.fc8)
+    max = tf.arg_max(score, 1)
 
-        # Call it always before finishing. To Deallocate resources.
-        self.tello.end()
+    with tf.Session() as sess:
 
-    def keydown(self, key):
-        """ Update velocities based on key pressed
-        Arguments:
-            key: pygame key
-        """
-        if key == pygame.K_UP: # set forward velocity
-            self.for_back_velocity = S
-        elif key == pygame.K_DOWN:
-            self.for_back_velocity = -S
-        elif key == pygame.K_LEFT: # set backward velocity
-            self.left_right_velocity = -S
-        elif key == pygame.K_RIGHT: # set right velocity
-            self.left_right_velocity = S
-        elif key == pygame.K_w: # set up velocity
-            self.up_down_velocity = S
-        elif key == pygame.K_s: # set down velocity
-            self.up_down_velocity = -S
-        elif key == pygame.K_a: # set yaw counter clockwise velocity
-            self.yaw_velocity = -S
-        elif key == pygame.K_d: # set yaw clockwise velocity
-            self.yaw_velocity = S
+        sess.run(tf.global_variables_initializer())
+        saver.restore(sess,
+                      "D:/Docs/tcc_indoor_final/finetune_alexnet/checkpoint/model_epoch178.ckpt")
+        # score = model.fc8
+        print(sess.run(model.fc8, feed_dict={keep_prob: 1.0}))
+        pred = sess.run(score, feed_dict={keep_prob: 1.0})
+        print("pred:", pred)
+        prob = sess.run(max, feed_dict={keep_prob: 1.0})[0]
+        print(prob)
 
-    def keyup(self, key):
-        """ Update velocities based on key released
-        Arguments:
-            key: pygame key
-        """
-        if key == pygame.K_UP or key == pygame.K_DOWN: # set zero forward/backward velocity
-            self.for_back_velocity = 0
-        elif key == pygame.K_LEFT or key == pygame.K_RIGHT:  # set zero left/right velocity
-            self.left_right_velocity = 0
-        elif key == pygame.K_w or key == pygame.K_s:  # set zero up/down velocity
-            self.up_down_velocity = 0
-        elif key == pygame.K_a or key == pygame.K_d:  # set zero yaw velocity
-            self.yaw_velocity = 0
-        elif key == pygame.K_t:  # takeoff
-            self.tello.takeoff()
-            self.send_rc_control = True
-        elif key == pygame.K_l:  # land
-            self.tello.land()
-            self.send_rc_control = False
+        class_name = class_names[np.argmax(pred)]
+        print(class_name)
 
-    def battery(self):
-        return self.tello.get_battery()[:2]
+        for (forward, left, right, spinLeft, spinRight, stop) in pred:
+             print(forward)
+             soma = int(forward * 100) + 5
+             print(soma)
+             print(left)
+             esquerda = int(left * 10) + 5
+             print(esquerda)
+             print(right)
+             print(spinLeft)
+             print(spinRight)
+             print(stop)
 
-    def update(self):
-        """ Update routine. Send velocities to Tello."""
-        if self.send_rc_control:
-            self.tello.send_rc_control(self.left_right_velocity, self.for_back_velocity,
-                                       self.up_down_velocity, self.yaw_velocity)
+        # matplotlib
+        plt.imshow(img_decoded.eval())
+        plt.title("Class:" + class_names[prob] + ",probability: %.4f" % pred[0, np.argmax(pred)])
+        plt.show()
 
-def main():
+image_path = 'D:/Docs/tcc_indoor/Indoor-AutonomousNavigation/4teste'
+data = []
+for filename_1 in os.listdir(os.path.join(image_path)):
+    print(filename_1)
+    filename_path = image_path+'/'+filename_1
+    data.append(filename_path)
 
-
-    frontend = FrontEnd()
-
-    # run frontend
-    frontend.run()
-
-if __name__ == '__main__':
-    main()
+for j in data:
+    print(j)
+    test_image(j, num_class=6)
  
 # class_names = ["moveForward", "moveLeft", "moveRight", "spinLeft", "spinRight", "stop"]
 #
