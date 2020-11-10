@@ -23,13 +23,15 @@ folder as this file:
 
 import tensorflow as tf
 import numpy as np
+from tensorflow.python.framework import tensor_util
+
 
 
 class AlexNet(object):
     """Implementation of the AlexNet."""
 
     def __init__(self, x, keep_prob, num_classes, skip_layer,
-                 weights_path='DEFAULT', momentum=0.9):
+                 weights_path='DEFAULT'):
         """Create the graph of the AlexNet model.
 
         Args:
@@ -46,7 +48,7 @@ class AlexNet(object):
         self.NUM_CLASSES = num_classes
         self.KEEP_PROB = keep_prob
         self.SKIP_LAYER = skip_layer
-        self.MOMENTUM = momentum
+        self.WEIGHTS_PATH = weights_path
 
         # Alterar caminho aqui para esse determinado aquivo:
         if weights_path == 'DEFAULT':
@@ -65,7 +67,7 @@ class AlexNet(object):
         pool1 = max_pool(norm1, 3, 3, 2, 2, padding='VALID', name='pool1')
 
         # 2nd Layer: Conv (w ReLu)  -> Lrn -> Pool with 2 groups
-        conv2 = conv(pool1, 5, 5, 256, 1, 1, groups=2, name='conv2')
+        conv2 = conv(pool1, 5, 5, 256, 1, 1, groups=1, name='conv2')
         norm2 = lrn(conv2, 2, 2e-05, 0.75, name='norm2')
         pool2 = max_pool(norm2, 3, 3, 2, 2, padding='VALID', name='pool2')
 
@@ -73,10 +75,10 @@ class AlexNet(object):
         conv3 = conv(pool2, 3, 3, 384, 1, 1, name='conv3')
 
         # 4th Layer: Conv (w ReLu) splitted into two groups
-        conv4 = conv(conv3, 3, 3, 384, 1, 1, groups=2, name='conv4')
+        conv4 = conv(conv3, 3, 3, 384, 1, 1, groups=1, name='conv4')
 
         # 5th Layer: Conv (w ReLu) -> Pool splitted into two groups
-        conv5 = conv(conv4, 3, 3, 256, 1, 1, groups=2, name='conv5')
+        conv5 = conv(conv4, 3, 3, 256, 1, 1, groups=1, name='conv5')
         pool5 = max_pool(conv5, 3, 3, 2, 2, padding='VALID', name='pool5')
         # 6th Layer: Flatten -> FC (w ReLu) -> Dropout
         flattened = tf.reshape(pool5, [-1, 6*6*256])
@@ -128,7 +130,6 @@ class AlexNet(object):
         # create a group operator for all assignments
         ret = tf.group(assign_list, name="load_weights")
         return ret
-
 
 def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
          padding='SAME', groups=1):
