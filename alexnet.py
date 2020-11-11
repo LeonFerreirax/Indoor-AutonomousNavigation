@@ -67,7 +67,7 @@ class AlexNet(object):
         pool1 = max_pool(norm1, 3, 3, 2, 2, padding='VALID', name='pool1')
 
         # 2nd Layer: Conv (w ReLu)  -> Lrn -> Pool with 2 groups
-        conv2 = conv(pool1, 5, 5, 256, 1, 1, groups=1, name='conv2')
+        conv2 = conv(pool1, 5, 5, 256, 1, 1, groups=2, name='conv2')
         norm2 = lrn(conv2, 2, 2e-05, 0.75, name='norm2')
         pool2 = max_pool(norm2, 3, 3, 2, 2, padding='VALID', name='pool2')
 
@@ -75,10 +75,10 @@ class AlexNet(object):
         conv3 = conv(pool2, 3, 3, 384, 1, 1, name='conv3')
 
         # 4th Layer: Conv (w ReLu) splitted into two groups
-        conv4 = conv(conv3, 3, 3, 384, 1, 1, groups=1, name='conv4')
+        conv4 = conv(conv3, 3, 3, 384, 1, 1, groups=2, name='conv4')
 
         # 5th Layer: Conv (w ReLu) -> Pool splitted into two groups
-        conv5 = conv(conv4, 3, 3, 256, 1, 1, groups=1, name='conv5')
+        conv5 = conv(conv4, 3, 3, 256, 1, 1, groups=2, name='conv5')
         pool5 = max_pool(conv5, 3, 3, 2, 2, padding='VALID', name='pool5')
         # 6th Layer: Flatten -> FC (w ReLu) -> Dropout
         flattened = tf.reshape(pool5, [-1, 6*6*256])
