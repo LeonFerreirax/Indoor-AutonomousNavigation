@@ -1,7 +1,7 @@
 numpy
 opencv-contrib-python
 opencv-python
-tensorflow==1.15.4
+tensorflow==2.5.3
 Cython
 Django
 Keras-Applications
